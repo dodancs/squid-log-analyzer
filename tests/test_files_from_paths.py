@@ -1,9 +1,10 @@
+import importlib
 import os
 import sys
 import re
 
 sys.path.append(os.path.abspath('..'))
-import main
+main = importlib.import_module("main")
 
 def test_simple():
     out = main.get_files_from_paths(['tests/files/one/'])
