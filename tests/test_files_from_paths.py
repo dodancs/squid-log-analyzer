@@ -1,5 +1,8 @@
 import os
+import sys
 import re
+
+sys.path.append(os.path.abspath('..'))
 import main
 
 def test_simple():
