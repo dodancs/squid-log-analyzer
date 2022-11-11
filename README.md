@@ -38,7 +38,7 @@ $ docker run --rm squid-log-analyzer --help
 If you don't want to build it yourself, you can use an existing Docker image from the Github Package Repository:
 
 ```bash
-docker run --rm ghcr.io/dodancs/squid-log-analyzer:latest --help
+$ docker run --rm ghcr.io/dodancs/squid-log-analyzer:latest --help
 ```
 
 ## Using this project
