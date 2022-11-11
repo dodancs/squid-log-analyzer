@@ -4,12 +4,12 @@ import logging
 import argparse
 import os
 import sys
-import regex
+import re
 from pathlib import Path
 import datetime
 
 # get files to process from a list of paths
-def get_files_from_paths(paths, recurse = False, pattern_filter = regex.compile('.*'), logger = logging.getLogger()):
+def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*'), logger = logging.getLogger()):
     to_process = []
 
     # go through all input paths
@@ -110,7 +110,7 @@ def init():
     filters = '.*'
     if args.filter:
         filters = '|'.join(args.filter)
-    pattern_filter = regex.compile(filters)
+    pattern_filter = re.compile(filters)
 
     # files to process
     to_process = get_files_from_paths(args.input_paths, recurse=args.recurse, pattern_filter=pattern_filter, logger=logger)

@@ -1,6 +1,6 @@
 import importlib
 import os
-import regex
+import re
 
 squid_log_analyzer = importlib.import_module("squid-log-analyzer")
 
@@ -9,11 +9,11 @@ def test_simple():
     assert out == [os.path.abspath('tests/files/one/log.txt')]
 
 def test_regex1():
-    out = squid_log_analyzer.get_files_from_paths(['tests/files/regex'], recurse = False, pattern_filter = regex.compile('\.txt'))
+    out = squid_log_analyzer.get_files_from_paths(['tests/files/regex'], recurse = False, pattern_filter = re.compile('\.txt'))
     assert out == [os.path.abspath('tests/files/regex/log.txt.gz'), os.path.abspath('tests/files/regex/log.txt')]
 
 def test_regex2():
-    out = squid_log_analyzer.get_files_from_paths(['tests/files/regex'], recurse = False, pattern_filter = regex.compile('\.txt$'))
+    out = squid_log_analyzer.get_files_from_paths(['tests/files/regex'], recurse = False, pattern_filter = re.compile('\.txt$'))
     assert out == [os.path.abspath('tests/files/regex/log.txt')]
 
 def test_nested():
