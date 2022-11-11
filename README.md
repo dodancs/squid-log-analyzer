@@ -48,7 +48,7 @@ You can print the usage documentation anytime by using the `--help` or `-h` argu
 ```bash
 $ squid-log-analyzer.py --help
 
-usage: squid-log-analyzer.py [-h] [-v] [--filter FILTER] [-r] [-f] [--mfip] [--lfip] [--eps] [--bytes] INPUT [INPUT ...] OUTPUT
+usage: squid-log-analyzer.py [-h] [-v] [--filter FILTER] [-r] [-f] [--mfip] [--lfip] [--eps] [--bytes] [--exclude-header-sizes] INPUT [INPUT ...] OUTPUT
 ```
 
 All of the arguments are described below.
