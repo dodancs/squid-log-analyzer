@@ -1,0 +1,24 @@
+name: Run unit tests
+
+on:
+  push:
+    paths:
+      - '*.py'
+      - 'tests/**'
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Test with pytest
+        run: |
+          pip install pytest
+          pytest --junitxml=junit/test-results.xml

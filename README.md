@@ -1,6 +1,6 @@
 # Simple Squid log analyzer
 
-![](https://img.shields.io/github/workflow/status/dodancs/squid-log-analyzer/Build%20Docker%20image?label=Docker%20Image%20Build&style=for-the-badge)
+![](https://img.shields.io/github/workflow/status/dodancs/squid-log-analyzer/Build%20Docker%20image?label=Docker%20Image%20Build&style=for-the-badge) ![](https://img.shields.io/github/workflow/status/dodancs/squid-log-analyzer/Run%20unit%20tests?label=Unit%20tests&style=for-the-badge)
 
 ## About this project
 
