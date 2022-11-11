@@ -21,6 +21,9 @@ jobs:
       - name: Get current working directory
         run: |
           python -c 'import os; print(os.path.abspath("."))'
+      - name: Get files in here
+        run: |
+          python -c 'import os; print(os.listdir(os.path.abspath(".")))'
       - name: Test with pytest
         run: |
           pip install pytest

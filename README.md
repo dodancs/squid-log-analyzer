@@ -18,7 +18,7 @@ You can run this command directly from your terminal like so:
 ```bash
 $ git clone https://github.com/dodancs/squid-log-analyzer.git
 $ cd squid-log-analyzer
-$ python3 main.py --help
+$ python3 analyzer.py --help
 ```
 
 But if you want, you can also build it as a Docker image:
@@ -46,9 +46,9 @@ $ docker run --rm ghcr.io/dodancs/squid-log-analyzer:latest --help
 You can print the usage documentation anytime by using the `--help` or `-h` argument:
 
 ```bash
-$ main.py --help
+$ analyzer.py --help
 
-usage: main.py [-h] [-v] [--filter FILTER] [-r] [-f] [--mfip] [--lfip] [--eps] [--bytes] [--exclude-header-sizes] INPUT [INPUT ...] OUTPUT
+usage: analyzer.py [-h] [-v] [--filter FILTER] [-r] [-f] [--mfip] [--lfip] [--eps] [--bytes] [--exclude-header-sizes] INPUT [INPUT ...] OUTPUT
 ```
 
 All of the arguments are described below.
@@ -116,11 +116,11 @@ Here are a few examples of the tool in action, so you can quickly learn how to u
 The tool requires at least one `INPUT` path and one `OUTPUT` path. Both of these paths can be either a file or a directory. Here are a few examples:
 
 ```bash
-$ main.py ./logs ./report.json
+$ analyzer.py ./logs ./report.json
 # Files from ./logs/ will be processed, and the output will be written to ./report.json
-$ main.py /var/log/squid/* ./
+$ analyzer.py /var/log/squid/* ./
 # Files from /var/log/squid/ will be processed, the output will be written to ./output-YYYY-MM-DD.HH-MM-SS.json
-$ main.py -r logs1 /tmp/squid/output.json
+$ analyzer.py -r logs1 /tmp/squid/output.json
 # Files from logs1 and its subdirectories will be processed, and the output will be written to /tmp/squid/output.json
 ```
 
@@ -131,11 +131,11 @@ If the output file does not exist, it will be created, as well as all of its par
 You can supply a [regular expression pattern](https://www.w3schools.com/python/python_regex.asp) to the tool to filter which files are allowed to be analyzed:
 
 ```bash
-$ main.py --filter '\.txt$' ./logs ./report.json
+$ analyzer.py --filter '\.txt$' ./logs ./report.json
 # Only files from ./logs/ that end with the '.txt' text will be processed.
-$ main.py --filter '\.txt$' --filter '\.log$' ./logs ./report.json
+$ analyzer.py --filter '\.txt$' --filter '\.log$' ./logs ./report.json
 # Only files from ./logs/ that end with the '.txt' or '.log' text will be processed.
-$ main.py -r --filter '(squid|apache)' /var/log ./report.json
+$ analyzer.py -r --filter '(squid|apache)' /var/log ./report.json
 # Files from /var/log and all subdirectories that contain 'squid' or 'apache' text in their paths will be processed.
 ```
 
@@ -144,6 +144,6 @@ $ main.py -r --filter '(squid|apache)' /var/log ./report.json
 To actually do anything useful, you need to specify at least one of the allowed operations - `--mfip`, `--lfip`, `--eps`, `--bytes`. Multiple operations can be run at the same time and their results will be included in the report output.
 
 ```bash
-$ main.py --mfip --eps --bytes ./logs.txt ./report.json
+$ analyzer.py --mfip --eps --bytes ./logs.txt ./report.json
 # File logs.txt will be analyzed and the most frequent IP address, the number of events per second and total bytes exchanged will be included in the report.json file.
 ```
