@@ -1,6 +1,9 @@
 import importlib
 import os
+import sys
 import re
+
+sys.path.append(os.path.abspath('..'))
 
 squid_log_analyzer = importlib.import_module("squid-log-analyzer")
 
@@ -10,7 +13,7 @@ def test_simple():
 
 def test_regex1():
     out = squid_log_analyzer.get_files_from_paths(['tests/files/regex'], recurse = False, pattern_filter = re.compile('\.txt'))
-    assert out == [os.path.abspath('tests/files/regex/log.txt.gz'), os.path.abspath('tests/files/regex/log.txt')]
+    assert not set(out).difference({os.path.abspath('tests/files/regex/log.txt'), os.path.abspath('tests/files/regex/log.txt.gz')})
 
 def test_regex2():
     out = squid_log_analyzer.get_files_from_paths(['tests/files/regex'], recurse = False, pattern_filter = re.compile('\.txt$'))
@@ -18,4 +21,4 @@ def test_regex2():
 
 def test_nested():
     out = squid_log_analyzer.get_files_from_paths(['tests/files/nested'], recurse = True)
-    assert out == [os.path.abspath('tests/files/nested/first.txt'), os.path.abspath('tests/files/nested/other/last/last.txt')]
+    assert not set(out).difference({os.path.abspath('tests/files/nested/first.txt'), os.path.abspath('tests/files/nested/other/last/last.txt')})
