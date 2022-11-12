@@ -5,6 +5,7 @@ on:
     paths:
       - '*.py'
       - 'Dockerfile'
+      - '.github/workflows/docker_build.yaml'
     branches:
       - main
 

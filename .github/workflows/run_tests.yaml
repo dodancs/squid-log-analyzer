@@ -5,6 +5,7 @@ on:
     paths:
       - '*.py'
       - 'tests/**'
+      - '.github/workflows/run_tests.yaml'
     branches:
       - main
 
