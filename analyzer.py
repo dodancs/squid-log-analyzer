@@ -23,6 +23,7 @@ def prepare_filters(filters = []):
     Returns:
         re.Pattern: Compiled regex pattern.
     """
+
     if not filters:
         return re.compile('.*')
 
@@ -124,7 +125,7 @@ def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*
 
 
 def prepare_output_file(file_path, force):
-    """Prepare the output file
+    """Prepare the output file.
 
     Args:
         file_path (str): Original file path specified by the user. Can be a directory or a file.
@@ -300,7 +301,7 @@ def parse_files_pandas(to_process, mfip = False, lfip = False, eps = False, coun
 
 
 def parse_files_regex(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
-    """Parse and analyze files with regex
+    """Parse and analyze files with regex.
 
     Args:
         to_process (list): List of file paths to analyze.
