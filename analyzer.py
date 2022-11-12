@@ -15,19 +15,42 @@ logger = None
 
 
 def prepare_filters(filters = []):
+    """Prepare regex pattern by combining all filters in an or statement.
+
+    Args:
+        filters (list, optional): List of regex filters. Defaults to [].
+
+    Returns:
+        re.Pattern: Compiled regex pattern.
+    """
     if not filters:
         return re.compile('.*')
 
     try:
-        return re.compile('|'.join(filters))
+        # if a signle filter is supplied, return it
+        if len(filters) == 1:
+            return re.compile(filters[0])
+
+        # join multiple filters with an or statement like so: (filter1)|(filter2)
+        return re.compile('(' + ')|('.join(filters) + ')')
     except Exception as ex:
         logger.error(f'Filter pattern is invalid!')
         logger.error(f'RegEx: {ex}')
         sys.exit(1)
 
 
-# get files to process from a list of paths
 def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*')):
+    """Get a list of files to process form a list of paths.
+
+    Args:
+        paths (list): List of paths.
+        recurse (bool, optional): Whether to look for files in subdirectories or not. Defaults to False.
+        pattern_filter (re.Pattern, optional): RegEx pattern to filter discovered file paths. Defaults to re.compile('.*').
+
+    Returns:
+        list: A list of file paths to process.
+    """
+
     global logger
     to_process = []
 
@@ -101,6 +124,16 @@ def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*
 
 
 def prepare_output_file(file_path, force):
+    """Prepare the output file
+
+    Args:
+        file_path (str): Original file path specified by the user. Can be a directory or a file.
+        force (bool): Whether to force overwrite the destination file.
+
+    Returns:
+        pathlib.Path: Path to the output file or None if the file exists and forceful override was not enabled.
+    """
+
     if file_path == '-':
         return None
 
@@ -130,6 +163,12 @@ def prepare_output_file(file_path, force):
 
 
 def init_argparser():
+    """Initialize the ArgumentParser library to accept commandline options.
+
+    Returns:
+        argparse.ArgumentParser: Initialized ArgumentParser object.
+    """
+
     parser = argparse.ArgumentParser(description='Squid log analyzer.')
 
     parser.add_argument('input_paths', metavar='INPUT', type=str, nargs='+',
@@ -165,6 +204,12 @@ def init_argparser():
 
 
 def init_logger(level):
+    """Initialize the logger.
+
+    Args:
+        level (logging._Level): Logging level (info, debug, ...).
+    """
+
     global logger
 
     logger = logging.getLogger()
@@ -174,8 +219,21 @@ def init_logger(level):
     logger.addHandler(logger_handler)
 
 
-# parse and analyze files with pandas
 def parse_files_pandas(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
+    """Parse and analyze files with pandas.
+
+    Args:
+        to_process (list): List of file paths to analyze.
+        mfip (bool, optional): Analyze the most frequent IP addresses. Defaults to False.
+        lfip (bool, optional): Analyze the least frequent IP addresses. Defaults to False.
+        eps (bool, optional): Analyze the number of events and number of events per second. Defaults to False.
+        count_bytes (bool, optional): Count the total number of bytes transmitted. Defaults to False.
+        exclude_header_sizes (bool, optional): Whether to exclude HTTP header sizes. Defaults to False.
+
+    Returns:
+        dict: Dictionary containing the analysis results.
+    """
+
     import pandas
 
     all_data = pandas.DataFrame()
@@ -241,8 +299,21 @@ def parse_files_pandas(to_process, mfip = False, lfip = False, eps = False, coun
     return result
 
 
-# parse and analyze files with regex
 def parse_files_regex(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
+    """Parse and analyze files with regex
+
+    Args:
+        to_process (list): List of file paths to analyze.
+        mfip (bool, optional): Analyze the most frequent IP addresses. Defaults to False.
+        lfip (bool, optional): Analyze the least frequent IP addresses. Defaults to False.
+        eps (bool, optional): Analyze the number of events and number of events per second. Defaults to False.
+        count_bytes (bool, optional): Count the total number of bytes transmitted. Defaults to False.
+        exclude_header_sizes (bool, optional): Whether to exclude HTTP header sizes. Defaults to False.
+
+    Returns:
+        dict: Dictionary containing the analysis results.
+    """
+
     result = {}
 
     ip_frequencies = {}
@@ -349,6 +420,8 @@ def parse_files_regex(to_process, mfip = False, lfip = False, eps = False, count
 
 
 def run():
+    """Main function for setting up the tool and running the analysis.
+    """
 
     # initialize argument parser
     parser = init_argparser()

@@ -11,6 +11,8 @@ analyzer.init_logger(logging.DEBUG)
 
 
 def test_eps_1():
+    """Analysis with regex for EPS of 1.0.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/1eps.txt'])
     assert analyzer.parse_files_regex(files, eps=True) == {
         'events': {
@@ -21,6 +23,8 @@ def test_eps_1():
 
 
 def test_eps_5():
+    """Analysis with regex for EPS of 5.0.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/5eps.txt'])
     assert analyzer.parse_files_regex(files, eps=True) == {
         'events': {
@@ -31,6 +35,8 @@ def test_eps_5():
 
 
 def test_eps_5_w_gaps():
+    """Analysis with regex for complex EPS.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/5eps_gaps.txt'])
     assert analyzer.parse_files_regex(files, eps=True) == {
         'events': {
@@ -41,6 +47,8 @@ def test_eps_5_w_gaps():
 
 
 def test_mfip():
+    """Analysis with regex for the most frequent IP address.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/5eps.txt'])
     assert analyzer.parse_files_regex(files, mfip=True) == {
         'mfip': {
@@ -51,6 +59,8 @@ def test_mfip():
 
 
 def test_lfip():
+    """Analysis with regex for the lest frequent IP address.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/5eps.txt'])
     assert analyzer.parse_files_regex(files, lfip=True) == {
         'lfip': {
@@ -61,6 +71,8 @@ def test_lfip():
 
 
 def test_bytes():
+    """Analysis with regex for the number of bytes transmitted.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/5eps.txt'])
     assert analyzer.parse_files_regex(files, count_bytes=True) == {
         'bytes': {
@@ -72,6 +84,8 @@ def test_bytes():
 
 
 def test_all():
+    """Full analysis with regex.
+    """
     files = analyzer.get_files_from_paths(['tests/files/eps/5eps_gaps.txt'])
     assert analyzer.parse_files_regex(files, mfip=True, lfip=True, eps=True, count_bytes=True) == {
         'mfip': {
