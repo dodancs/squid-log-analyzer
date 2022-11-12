@@ -220,8 +220,6 @@ def parse_files_regex(to_process, mfip = False, lfip = False, eps = False, count
 
                 # if the line does not match, skip it
                 if not match:
-                    print(f'Non match: {event_num + 1}')
-                    print(line)
                     continue
 
                 # count events
