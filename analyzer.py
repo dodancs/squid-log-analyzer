@@ -84,6 +84,8 @@ def init_argparser():
                         help='recursively search for files in sub-directories')
     parser.add_argument('-f', '--force', action='store_true',
                         help='overwrite output file if already exists')
+    parser.add_argument('--fast', action='store_true',
+                        help='use a fast regex-based analysis')
 
     operations = parser.add_argument_group('operations')
     operations.add_argument('--mfip', action='store_true',
@@ -111,8 +113,8 @@ def init_logger(level):
     logger.addHandler(logger_handler)
 
 
-# parse and analyze files
-def parse_files(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
+# parse and analyze files with pandas
+def parse_files_pandas(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
     all_data = pandas.DataFrame()
     result = {}
 
@@ -126,6 +128,24 @@ def parse_files(to_process, mfip = False, lfip = False, eps = False, count_bytes
     if not len(all_data):
         logger.info('Nothing to do - no data supplied.')
         sys.exit(0)
+
+    # count the number of bytes transmitted
+    if count_bytes:
+        headers = 0
+
+        # get all body sizes
+        bodies = all_data[all_data['Body size'] > 0]['Body size'].sum()
+
+        result['bytes'] = {
+            'body': int(bodies)
+        }
+
+        # get all header sizes
+        if not exclude_header_sizes:
+            headers = all_data[all_data['Headers size'] > 0]['Headers size'].sum()
+            result['bytes']['headers'] = int(headers)
+
+        result['bytes']['total'] = int(bodies + headers)
 
     # count the occurence of source IP addresses
     if mfip or lfip:
@@ -150,27 +170,119 @@ def parse_files(to_process, mfip = False, lfip = False, eps = False, count_bytes
         all_data['Timestamp'] = pandas.to_datetime(all_data.Timestamp, unit='s')
         events = all_data.groupby(pandas.Grouper(key='Timestamp', freq='S'))['Timestamp'].count()
 
-        result['eps'] = {
-            'count': sum(events.values) / len(events.values)
+        result['events'] = {
+            'count': len(all_data.values),
+            'eps': sum(events.values) / len(events.values)
         }
 
-    # count the number of bytes transmitted
+    return result
+
+
+# parse and analyze files with regex
+def parse_files_regex(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
+    result = {}
+
+    ip_frequencies = {}
+
+    event_num = 0
+    epoch_start = None
+    epoch_end = 0
+
+    # too slow regex
+    #regex_timestmap = r'(\d+.?\d+?)'
+    #regex_ip = r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+    #regex_http_method = r'(CONNECT|HEAD|OPTIONS|GET|POST|PUT|DELETE|PATCH|TRACE)'
+    #regex_url = r'(((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*)'
+    # regex = re.compile(r'^' + regex_timestmap + r'\s+(\-?\d+)\s+' + regex_ip + r'\s+([A-Z0-9_/]+)\s+\-?(\d+)\s+' + regex_http_method + r'\s+' + regex_url + r'\s+([a-zA-Z\-_]+)\s+(([A-Z_/]+)' + regex_ip + r')\s+([a-z\-/]+)$')
+    
+    # the regex below this comment should be used, but it does not process a row that has more than 10 fields
+    # https://www.secrepo.com/squid/access.log.gz on line 82948 has two log events merged into one line
+    # and that yields different results, because without the --fast option, it also processes that line
+    # regex = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$')
+
+    # simpler regex is much faster
+    regex = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+).*')
+
+    # prepare result byte count
     if count_bytes:
-        headers = 0
+        result['bytes'] = {'body': 0}
+        if not exclude_header_sizes:
+            result['bytes']['headers'] = 0
 
-        # get all body sizes
-        bodies = all_data[all_data['Body size'] > 0]['Body size'].sum()
+    # process all
+    for f in to_process:
+        # read data from log file
+        with open(f, 'r') as ff:
+            # go through all lines
+            for line in ff.readlines():
+                # try to match regex pattern
+                match = regex.search(line)
 
-        result['bytes'] = {
-            'body': int(bodies)
+                # if the line does not match, skip it
+                if not match:
+                    print(f'Non match: {event_num + 1}')
+                    print(line)
+                    continue
+
+                # count events
+                event_num += 1
+
+                if eps:
+                    # keep the epoch time start and end of all events
+                    epoch = int(match.groups()[0].split('.')[0])
+                    if not epoch_start or epoch_start > epoch:
+                        epoch_start = epoch
+                    if epoch > epoch_end:
+                        epoch_end = epoch
+
+                # count the frequency for IPs
+                if mfip or lfip:
+                    if not match.groups()[2] in ip_frequencies:
+                        ip_frequencies[match.groups()[2]] = 1
+                    else:
+                        ip_frequencies[match.groups()[2]] += 1
+
+                # add bytes from header and body
+                if count_bytes:
+                    body = int(match.groups()[4])
+                    headers = int(match.groups()[1])
+
+                    # sometimes the value can be -1
+                    result['bytes']['body'] += body if body > 0 else 0
+
+                    if not exclude_header_sizes:
+                        # sometimes the value can be -1
+                        result['bytes']['headers'] += headers if headers > 0 else 0
+
+    # count the total number of bytes
+    if count_bytes:
+        result['bytes']['total'] = result['bytes']['body'] + result['bytes']['headers']
+
+    # sort IP frequencies
+    if mfip or lfip:
+        ip_frequencies = sorted(ip_frequencies.items(), key=lambda x: x[1])
+        ip_frequencies_len = len(ip_frequencies)
+
+    # add the most frequent IP to the result
+    if mfip:
+        result['mfip'] = {
+            'ip_address': ip_frequencies[ip_frequencies_len - 1][0],
+            'count': ip_frequencies[ip_frequencies_len - 1][1]
         }
 
-        # get all header sizes
-        if not exclude_header_sizes:
-            headers = all_data[all_data['Headers size'] > 0]['Headers size'].sum()
-            result['bytes']['headers'] = int(headers)
+    # add the least frequent IP to the result
+    if lfip:
+        result['lfip'] = {
+            'ip_address': ip_frequencies[0][0],
+            'count': ip_frequencies[0][1]
+        }
 
-        result['bytes']['total'] = int(bodies + headers)
+    # add the number of events per second to the result
+    if eps:
+        result['events'] = {
+            'count': event_num,
+            'eps': event_num / (epoch_end - epoch_start + 1)
+        }
 
     return result
 
@@ -205,32 +317,41 @@ def run():
         sys.exit(1)
 
     # get output file path
-    output_file_path = Path(args.output_file)
+    if args.output_file != '-':
+        output_file_path = Path(args.output_file)
 
-    # if the output file is a directory, add /output.json to the path
-    if os.path.isdir(output_file_path):
-        current_date = datetime.datetime.now().strftime('%Y-%m-%d.%H-%M-%S')
-        output_file_path = Path(os.path.join(output_file_path, f'output-{current_date}.json'))
+        # if the output file is a directory, add /output.json to the path
+        if os.path.isdir(output_file_path):
+            current_date = datetime.datetime.now().strftime('%Y-%m-%d.%H-%M-%S')
+            output_file_path = Path(os.path.join(output_file_path, f'output-{current_date}.json'))
 
-    # if output directory does not exist, create it
-    out_dir = output_file_path.parent.absolute()
-    if not os.path.isdir(out_dir):
-        logger.debug(f'Creating output directory \'{out_dir}\'')
+        # if output directory does not exist, create it
+        out_dir = output_file_path.parent.absolute()
+        if not os.path.isdir(out_dir):
+            logger.debug(f'Creating output directory \'{out_dir}\'')
 
-        try:
-            os.makedirs(out_dir, exist_ok=True)
-        except:
-            logger.exception(f'Unable to create the output directory \'{out_dir}\'!')
+            try:
+                os.makedirs(out_dir, exist_ok=True)
+            except:
+                logger.exception(f'Unable to create the output directory \'{out_dir}\'!')
+                sys.exit(1)
+
+        if os.path.exists(output_file_path) and not args.force:
+            logger.error(f'Output file \'{output_file_path}\' already exists!')
             sys.exit(1)
 
-    if os.path.exists(output_file_path) and not args.force:
-        logger.error(f'Output file \'{output_file_path}\' already exists!')
-        sys.exit(1)
+    result = {}
 
-    result = parse_files(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
+    if args.fast:
+        result = parse_files_regex(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
+    else:
+        result = parse_files_pandas(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
 
-    with open(output_file_path, 'w') as output:
-        output.write(json.dumps(result, indent=4))
+    if args.output_file == '-':
+        print(json.dumps(result, indent=4))
+    else:
+        with open(output_file_path, 'w') as output:
+            output.write(json.dumps(result, indent=4))
 
 if __name__ == '__main__':
     run()

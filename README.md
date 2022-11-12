@@ -51,7 +51,7 @@ You can print the usage documentation anytime by using the `--help` or `-h` argu
 ```bash
 $ analyzer.py --help
 
-usage: analyzer.py [-h] [-v] [--filter FILTER] [-r] [-f] [--mfip] [--lfip] [--eps] [--bytes] [--exclude-header-sizes] INPUT [INPUT ...] OUTPUT
+usage: analyzer.py [-h] [-v] [--filter FILTER] [-r] [-f] [--fast] [--mfip] [--lfip] [--eps] [--bytes] [--exclude-header-sizes] INPUT [INPUT ...] OUTPUT
 ```
 
 All of the arguments are described below.
@@ -61,7 +61,7 @@ All of the arguments are described below.
 | Argument    | Description | Example    |
 |-------------|-------------|------------|
 | `INPUT`<br />`[INPUT ...]` | Paths to files or directories that contain log files. If a directory is specified, all of the files in that directory will be added for analysis.<br />The user may also specify multiple paths for the INPUT, in which case the tool will analyze all of the paths supplied. | `logs.txt` or `logs/` |
-| `OUTPUT` | Path to the output file or directory. If a directory is specified, a new file with the current timestamp (`output-YYYY-MM-DD.HH-MM-SS.json`) will be created in that directory. If the path supplied does not exist, all of the parent directories will be created automatically. | `output.json` |
+| `OUTPUT` | Path to the output file or directory. If a directory is specified, a new file with the current timestamp (`output-YYYY-MM-DD.HH-MM-SS.json`) will be created in that directory. If the path supplied does not exist, all of the parent directories will be created automatically.<br />The output can also be `-` in which case the results are printed in JSON format to the `stdout`. | `output.json` or `-` |
 
 #### Optional arguments:
 
@@ -71,6 +71,7 @@ All of the arguments are described below.
 | `-v`<br />`--verbose` | Show verbose log output. The tool will print a lot of information to help you debug what is happening. |  |
 | `--filter FILTER` | [RegEx](https://www.w3schools.com/python/python_regex.asp) filter pattern for file names. **Only files that match a filter will be analyzed.** You can also supply multiple filter patterns to match more files.<br>*Note: Filters work with the absolute file paths.* | `--filter '\.txt$'` `--filter '\.log$'` |
 | `-r`<br />`--recurse` | Enable directory recursion. Files in sub-directories will also be included in analysis. | For input of `-r` `./dir`, any files in `./dir/dir2`, `./dir/dir2/dir3` as well as all other will be added. |
+| `--fast` | Use a fast regex-based analysis. Improvements can be seen mainly when analyzing the EPS with big files. |  |
 | `-f`<br />`--force` | Overwrite the output file if it already exists. **This action is irreversible.** |  |
 | `--exclude-header-sizes` | Do not count the bytes sent in the headers section of an HTTP request. Only bytes transfered in the body of the request will be taken into account.<br />**This argument is to be used together with `--bytes`.** |  |
 
@@ -80,7 +81,7 @@ All of the arguments are described below.
 |-------------|-------------|
 | `--mfip` | Analyze the **most frequent** IP address present in the log files. |
 | `--lfip` | Analyze the **least frequent** IP address present in the log files. |
-| `--eps` | Count the number of events per second. |
+| `--eps` | Count the number of events and events per second. |
 | `--bytes` | Count the total number of bytes exchanged.<br />Can be used together with `--exclude-header-sizes` to only count transmitted bytes in the body of each request. |
 
 ## Input log file example
@@ -112,7 +113,7 @@ Each operation will result in having its data object in the output:
 
 - `--mfip`: the <u>most frequent</u> client IP address and its count
 - `--lfip`: the <u>least frequent</u> client IP address and its count
-- `--eps`: average count of events per second
+- `--eps`: the total count of events and the average number of events per second
 - `--bytes`: number of bytes transferred in the HTTP response body, headers and the total sum of both.
   - When `--exclude-header-sizes` is used, only the body size and total number of bytes will be returned
 
@@ -126,8 +127,9 @@ Each operation will result in having its data object in the output:
         "ip_address": "192.168.100.2",
         "count": 1
     },
-    "eps": {
-        "count": 0.16176470588235295
+    "events": {
+        "count": 425,
+        "eps": 0.16176470588235295
     },
     "bytes": {
         "body": 331550,
@@ -141,17 +143,22 @@ Each operation will result in having its data object in the output:
 
 Here are a few examples of the tool in action, so you can quickly learn how to use its features.
 
+*<u>NOTE:</u> We recommend to use the `--fast` option when analyzing large files.*
+
 #### File input and output
 
 The tool requires at least one `INPUT` path and one `OUTPUT` path. Both of these paths can be either a file or a directory. Here are a few examples:
 
 ```bash
 $ analyzer.py ./logs ./report.json
-# Files from ./logs/ will be processed, and the output will be written to ./report.json
+# Files from ./logs/ will be processed,
+# and the output will be written to ./report.json
 $ analyzer.py /var/log/squid/* ./
-# Files from /var/log/squid/ will be processed, the output will be written to ./output-YYYY-MM-DD.HH-MM-SS.json
+# Files from /var/log/squid/ will be processed,
+# the output will be written to ./output-YYYY-MM-DD.HH-MM-SS.json
 $ analyzer.py -r logs1 /tmp/squid/output.json
-# Files from logs1 and its subdirectories will be processed, and the output will be written to /tmp/squid/output.json
+# Files from logs1 and its subdirectories will be processed,
+# and the output will be written to /tmp/squid/output.json
 ```
 
 If the output file does not exist, it will be created, as well as all of its parent directories.
@@ -166,7 +173,8 @@ $ analyzer.py --filter '\.txt$' ./logs ./report.json
 $ analyzer.py --filter '\.txt$' --filter '\.log$' ./logs ./report.json
 # Only files from ./logs/ that end with the '.txt' or '.log' text will be processed.
 $ analyzer.py -r --filter '(squid|apache)' /var/log ./report.json
-# Files from /var/log and all subdirectories that contain 'squid' or 'apache' text in their paths will be processed.
+# Files from /var/log and all subdirectories that contain 'squid' or
+# 'apache' text in their paths will be processed.
 ```
 
 ####  Analyze the logs
@@ -174,16 +182,17 @@ $ analyzer.py -r --filter '(squid|apache)' /var/log ./report.json
 To actually do anything useful, you need to specify at least one of the allowed operations - `--mfip`, `--lfip`, `--eps`, `--bytes`. Multiple operations can be run at the same time and their results will be included in the report output.
 
 ```bash
-$ analyzer.py --mfip --eps --bytes ./logs.txt ./report.json
-# File logs.txt will be analyzed and the most frequent IP address, the number of events per second and total bytes exchanged will be included in the report.json file.
-$ cat report.json
+$ analyzer.py --mfip --eps --bytes --fast ./logs.txt -
+# File logs.txt will be analyzed and the most frequent IP address,
+# the number of events per second and total bytes exchanged will be printed to the console.
 {
     "mfip": {
         "ip_address": "127.0.0.1",
         "count": 11
     },
-    "eps": {
-        "count": 5.0
+    "events": {
+        "count": 15
+        "eps": 5.0
     },
     "bytes": {
         "body": 7480,
