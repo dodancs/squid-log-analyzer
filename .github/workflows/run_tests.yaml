@@ -21,7 +21,8 @@ jobs:
           python-version: '3.x'
       - name: Install dependencies
         run: |
+          sudo apt update
           sudo apt install -y python3-pandas
       - name: Test with pytest
         run: |
-          pytest --junitxml=junit/test-results.xml -v
+          python3 -m pytest --junitxml=junit/test-results.xml -v

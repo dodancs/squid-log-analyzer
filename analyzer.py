@@ -7,7 +7,6 @@ import sys
 import re
 from pathlib import Path
 import datetime
-import pandas
 import json
 
 
@@ -115,6 +114,8 @@ def init_logger(level):
 
 # parse and analyze files with pandas
 def parse_files_pandas(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
+    import pandas
+
     all_data = pandas.DataFrame()
     result = {}
 
