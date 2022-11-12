@@ -7,6 +7,9 @@ import sys
 import re
 from pathlib import Path
 import datetime
+import pandas
+import json
+
 
 # global variables
 logger = None
@@ -108,6 +111,70 @@ def init_logger(level):
     logger.addHandler(logger_handler)
 
 
+# parse and analyze files
+def parse_files(to_process, mfip = False, lfip = False, eps = False, count_bytes = False, exclude_header_sizes = False):
+    all_data = pandas.DataFrame()
+    result = {}
+
+    # add all data into one dataframe
+    for f in to_process:
+        # read data from log file
+        data = pandas.read_csv(f, delimiter=r'\s+', usecols=range(10), names=['Timestamp', 'Headers size', 'Source IP address', 'Response code', 'Body size', 'Request method', 'URL', 'Username', 'Destination IP address', 'Mimetype'], skip_blank_lines=True)
+        all_data = pandas.concat([all_data, data])
+
+    # if no data has been read - exit
+    if not len(all_data):
+        logger.info('Nothing to do - no data supplied.')
+        sys.exit(0)
+
+    # count the occurence of source IP addresses
+    if mfip or lfip:
+        counts = all_data['Source IP address'].value_counts()
+
+        # most frequent IP
+        if mfip:
+            result['mfip'] = {
+                'ip_address': counts.head(1).index[0],
+                'count': int(counts.head(1).values[0])
+            }
+
+        # least frequent IP
+        if lfip:
+            result['lfip'] = {
+                'ip_address': counts.tail(1).index[0],
+                'count': int(counts.tail(1).values[0])
+            }
+
+    # count the number of events every second and get the average
+    if eps:
+        all_data['Timestamp'] = pandas.to_datetime(all_data.Timestamp, unit='s')
+        events = all_data.groupby(pandas.Grouper(key='Timestamp', freq='S'))['Timestamp'].count()
+
+        result['eps'] = {
+            'count': sum(events.values) / len(events.values)
+        }
+
+    # count the number of bytes transmitted
+    if count_bytes:
+        headers = 0
+
+        # get all body sizes
+        bodies = all_data[all_data['Body size'] > 0]['Body size'].sum()
+
+        result['bytes'] = {
+            'body': int(bodies)
+        }
+
+        # get all header sizes
+        if not exclude_header_sizes:
+            headers = all_data[all_data['Headers size'] > 0]['Headers size'].sum()
+            result['bytes']['headers'] = int(headers)
+
+        result['bytes']['total'] = int(bodies + headers)
+
+    return result
+
+
 def run():
 
     # initialize argument parser
@@ -160,7 +227,10 @@ def run():
         logger.error(f'Output file \'{output_file_path}\' already exists!')
         sys.exit(1)
 
-    # TODO: do stuff
+    result = parse_files(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
+
+    with open(output_file_path, 'w') as output:
+        output.write(json.dumps(result, indent=4))
 
 if __name__ == '__main__':
     run()

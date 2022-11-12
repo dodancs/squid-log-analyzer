@@ -10,14 +10,17 @@ This is a simple application allowing any user to analyze the contents of Squid 
 
 There are some prerequisites listed below that are needed for the project to run:
 
-- Python 3 <u>(Python 2 is not supported)</u>
-- Docker *(optional)*
+- [Python 3](https://www.python.org/downloads/) <u>(Python 2 is not supported)</u>
+- [Pip](https://pip.pypa.io/en/stable/installation/)
+- Python [requirements](requirements.txt)
+- [Docker](https://docs.docker.com/get-docker/) *(optional)*
 
 You can run this command directly from your terminal like so:
 
 ```bash
 $ git clone https://github.com/dodancs/squid-log-analyzer.git
 $ cd squid-log-analyzer
+$ pip3 install -r ./requirements.txt
 $ python3 analyzer.py --help
 ```
 
@@ -105,7 +108,34 @@ The individual fields are described below:
 
 The tool generates output in plaintext JSON format which can be easily used by any other tools or read directly by humans without further processing.
 
-\# TODO: Show JSON output and explain
+Each operation will result in having its data object in the output:
+
+- `--mfip`: the <u>most frequent</u> client IP address and its count
+- `--lfip`: the <u>least frequent</u> client IP address and its count
+- `--eps`: average count of events per second
+- `--bytes`: number of bytes transferred in the HTTP response body, headers and the total sum of both.
+  - When `--exclude-header-sizes` is used, only the body size and total number of bytes will be returned
+
+```json
+{
+    "mfip": {
+        "ip_address": "10.10.10.5",
+        "count": 55
+    },
+    "lfip": {
+        "ip_address": "192.168.100.2",
+        "count": 1
+    },
+    "eps": {
+        "count": 0.16176470588235295
+    },
+    "bytes": {
+        "body": 331550,
+        "headers": 299272,
+        "total": 630822
+    }
+}
+```
 
 ## Example usage
 
@@ -146,4 +176,19 @@ To actually do anything useful, you need to specify at least one of the allowed 
 ```bash
 $ analyzer.py --mfip --eps --bytes ./logs.txt ./report.json
 # File logs.txt will be analyzed and the most frequent IP address, the number of events per second and total bytes exchanged will be included in the report.json file.
+$ cat report.json
+{
+    "mfip": {
+        "ip_address": "127.0.0.1",
+        "count": 11
+    },
+    "eps": {
+        "count": 5.0
+    },
+    "bytes": {
+        "body": 7480,
+        "headers": 1520,
+        "total": 9000
+    }
+}
 ```

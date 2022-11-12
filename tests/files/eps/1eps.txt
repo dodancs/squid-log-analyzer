@@ -1,0 +1,5 @@
+1579776202     25 127.0.0.1 TCP_MISS/200 509 GET http://detectportal.firefox.com/success.txt - HIER_DIRECT/23.203.248.25 text/plain
+
+1579776203     16 127.0.0.1 TCP_TUNNEL/200 39 CONNECT snippets.cdn.mozilla.net:443 - HIER_DIRECT/52.85.43.247 -
+
+1579776204    263 127.0.0.1 TCP_MISS/200 948 POST http://ocsp.digicert.com/ - HIER_DIRECT/117.18.237.29 application/ocsp-response
