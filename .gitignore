@@ -7,3 +7,5 @@ __pycache__
 junit
 .pytest_cache
 .coverage
+.DS_Store
+.pdf
