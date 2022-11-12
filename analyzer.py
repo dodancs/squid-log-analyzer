@@ -8,8 +8,13 @@ import re
 from pathlib import Path
 import datetime
 
+# global variables
+logger = None
+
+
 # get files to process from a list of paths
-def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*'), logger = logging.getLogger()):
+def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*')):
+    global logger
     to_process = []
 
     # go through all input paths
@@ -59,9 +64,8 @@ def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*
 
     return to_process
 
-def init():
 
-    # initialize argument parser
+def init_argparser():
     parser = argparse.ArgumentParser(description='Squid log analyzer.')
 
     parser.add_argument('input_paths', metavar='INPUT', type=str, nargs='+',
@@ -91,15 +95,28 @@ def init():
     parser.add_argument('--exclude-header-sizes', action='store_true',
                         help='exclude HTTP header sizes from the number of bytes exchanged')
 
+    return parser
+
+
+def init_logger(level):
+    global logger
+
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    logger_handler = logging.StreamHandler(sys.stdout)
+    logger_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    logger.addHandler(logger_handler)
+
+
+def run():
+
+    # initialize argument parser
+    parser = init_argparser()
     # parse arguments
     args = parser.parse_args()
 
     # set up logging
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
-    logger_handler = logging.StreamHandler(sys.stdout)
-    logger_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
-    logger.addHandler(logger_handler)
+    init_logger(logging.DEBUG if args.verbose else logging.INFO)
 
     # check if at least one operation was set
     if not args.mfip and not args.lfip and not args.eps and not args.bytes:
@@ -113,7 +130,7 @@ def init():
     pattern_filter = re.compile(filters)
 
     # files to process
-    to_process = get_files_from_paths(args.input_paths, recurse=args.recurse, pattern_filter=pattern_filter, logger=logger)
+    to_process = get_files_from_paths(args.input_paths, recurse=args.recurse, pattern_filter=pattern_filter)
 
     # exit if no files were specified
     if not to_process:
@@ -146,4 +163,4 @@ def init():
     # TODO: do stuff
 
 if __name__ == '__main__':
-    init()
+    run()

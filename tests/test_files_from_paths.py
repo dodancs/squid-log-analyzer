@@ -1,9 +1,14 @@
 import os
 import sys
 import re
+import logging
 
 sys.path.append(os.path.abspath('.'))
 import analyzer
+
+# global variables
+logger = None
+analyzer.init_logger(logging.DEBUG)
 
 def test_simple():
     out = analyzer.get_files_from_paths(['tests/files/one/'])
