@@ -14,6 +14,18 @@ import json
 logger = None
 
 
+def prepare_filters(filters = []):
+    if not filters:
+        return re.compile('.*')
+
+    try:
+        return re.compile('|'.join(filters))
+    except Exception as ex:
+        logger.error(f'Filter pattern is invalid!')
+        logger.error(f'RegEx: {ex}')
+        sys.exit(1)
+
+
 # get files to process from a list of paths
 def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*')):
     global logger
@@ -31,40 +43,90 @@ def get_files_from_paths(paths, recurse = False, pattern_filter = re.compile('.*
                 logger.debug(f'Pattern \'{pattern_filter.pattern}\' does not match \'{absolute_path}\'.')
                 continue
 
-            # add file if not already added
-            if absolute_path not in to_process:
-                logger.debug(f'Adding file \'{p}\'.')
-                to_process.append(absolute_path)
+            # check if the file has already been added
+            if absolute_path in to_process:
+                continue
+
+            # check if the file can be opened
+            try:
+                with open(absolute_path, 'r') as f:
+                    f.close()
+            except:
+                logger.debug(f'Unable to read file \'{absolute_path}\'!')
+                continue
+
+            # add file
+            logger.debug(f'Adding file \'{p}\'.')
+            to_process.append(absolute_path)
+            continue
 
         # if path is a directory, search through it
-        elif os.path.isdir(p):
+        if os.path.isdir(p):
 
             # go through paths in directory
             for pp in os.listdir(p):
                 subpath = os.path.join(p, pp)
 
                 # process files
-                if os.path.isfile(subpath) and subpath not in paths:
+                if os.path.isfile(subpath):
+                    if subpath in paths:
+                        continue
+
                     paths.append(subpath)
+                    continue
 
                 # process directories
-                elif os.path.isdir(subpath):
+                if os.path.isdir(subpath):
 
                     # skip directory if recursion not allowed
                     if not recurse:
                         logger.debug(f'Skipping subdirectory \'{subpath}\'.')
                         continue
 
+                    # check if the directory has already been added
+                    if subpath in paths:
+                        continue
+
                     # also process files in subdirectory recursively
-                    if subpath not in paths:
-                        paths.append(subpath)
+                    paths.append(subpath)
+                    continue
+
+                # if path does not exist, show error
+                logger.debug(f'Unable to access path \'{subpath}\'!')
 
         # if path does not exist, show error
-        else:
-            logger.debug(f'Unable to access path \'{p}\'!')
-            continue
+        logger.debug(f'Unable to access path \'{p}\'!')
 
     return to_process
+
+
+def prepare_output_file(file_path, force):
+    if file_path == '-':
+        return None
+
+    output_file_path = Path(file_path)
+
+    # if the output file is a directory, add /output.json to the path
+    if os.path.isdir(output_file_path):
+        current_date = datetime.datetime.now().strftime('%Y-%m-%d.%H-%M-%S')
+        output_file_path = Path(os.path.join(output_file_path, f'output-{current_date}.json'))
+
+    # if output directory does not exist, create it
+    out_dir = output_file_path.parent.absolute()
+    if not os.path.isdir(out_dir):
+        logger.debug(f'Creating output directory \'{out_dir}\'')
+
+        try:
+            os.makedirs(out_dir, exist_ok=True)
+        except:
+            logger.exception(f'Unable to create the output directory \'{out_dir}\'!')
+            sys.exit(1)
+
+    if os.path.exists(output_file_path) and not force:
+        logger.error(f'Output file \'{output_file_path}\' already exists!')
+        sys.exit(1)
+
+    return output_file_path
 
 
 def init_argparser():
@@ -301,11 +363,8 @@ def run():
         logger.info('Nothing to do - no operation supplied.')
         sys.exit(0)
 
-    # prepare pattern filters
-    filters = '.*'
-    if args.filter:
-        filters = '|'.join(args.filter)
-    pattern_filter = re.compile(filters)
+    # prepare pattern filter
+    pattern_filter = prepare_filters(args.filter)
 
     # files to process
     to_process = get_files_from_paths(args.input_paths, recurse=args.recurse, pattern_filter=pattern_filter)
@@ -316,41 +375,27 @@ def run():
         sys.exit(1)
 
     # get output file path
-    if args.output_file != '-':
-        output_file_path = Path(args.output_file)
+    output_file_path = prepare_output_file(args.output_file, args.force)
 
-        # if the output file is a directory, add /output.json to the path
-        if os.path.isdir(output_file_path):
-            current_date = datetime.datetime.now().strftime('%Y-%m-%d.%H-%M-%S')
-            output_file_path = Path(os.path.join(output_file_path, f'output-{current_date}.json'))
-
-        # if output directory does not exist, create it
-        out_dir = output_file_path.parent.absolute()
-        if not os.path.isdir(out_dir):
-            logger.debug(f'Creating output directory \'{out_dir}\'')
-
-            try:
-                os.makedirs(out_dir, exist_ok=True)
-            except:
-                logger.exception(f'Unable to create the output directory \'{out_dir}\'!')
-                sys.exit(1)
-
-        if os.path.exists(output_file_path) and not args.force:
-            logger.error(f'Output file \'{output_file_path}\' already exists!')
-            sys.exit(1)
-
-    result = {}
-
+    # use regex parser if --fast option is set
+    file_parser = parse_files_pandas
     if args.fast:
-        result = parse_files_regex(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
-    else:
-        result = parse_files_pandas(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
+        file_parser = parse_files_regex
 
-    if args.output_file == '-':
-        print(json.dumps(result, indent=4))
-    else:
+    result = file_parser(to_process, mfip=args.mfip, lfip=args.lfip, eps=args.eps, count_bytes=args.bytes, exclude_header_sizes=args.exclude_header_sizes)
+
+    # print to stdout if '-' was supplied as output file path
+    if not output_file_path:
+        print(json.dumps(result, indent=4), flush=True)
+        sys.exit(0)
+
+    # write results to the output file
+    try:
         with open(output_file_path, 'w') as output:
             output.write(json.dumps(result, indent=4))
+    except:
+        logger.debug(f'Unable to write output file \'{output_file_path}\'!')
+        sys.exit(1)
 
 if __name__ == '__main__':
     run()

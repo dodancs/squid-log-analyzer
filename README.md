@@ -71,7 +71,7 @@ All of the arguments are described below.
 | `-v`<br />`--verbose` | Show verbose log output. The tool will print a lot of information to help you debug what is happening. |  |
 | `--filter FILTER` | [RegEx](https://www.w3schools.com/python/python_regex.asp) filter pattern for file names. **Only files that match a filter will be analyzed.** You can also supply multiple filter patterns to match more files.<br>*Note: Filters work with the absolute file paths.* | `--filter '\.txt$'` `--filter '\.log$'` |
 | `-r`<br />`--recurse` | Enable directory recursion. Files in sub-directories will also be included in analysis. | For input of `-r` `./dir`, any files in `./dir/dir2`, `./dir/dir2/dir3` as well as all other will be added. |
-| `--fast` | Use a fast regex-based analysis. Improvements can be seen mainly when analyzing the EPS with big files. |  |
+| `--fast` | Use a fast regex-based analysis. Improvements can be seen mainly when analyzing the EPS with big files. The fast mode can be around **5.5x faster**. |  |
 | `-f`<br />`--force` | Overwrite the output file if it already exists. **This action is irreversible.** |  |
 | `--exclude-header-sizes` | Do not count the bytes sent in the headers section of an HTTP request. Only bytes transfered in the body of the request will be taken into account.<br />**This argument is to be used together with `--bytes`.** |  |
 
