@@ -9,3 +9,4 @@ junit
 .coverage
 .DS_Store
 *.pdf
+!requirements.txt
